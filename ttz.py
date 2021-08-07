@@ -1,4 +1,5 @@
 import requests
+import pycolors
 import re
 
 BASE_URL = 'https://br.tradertimerzone.com/'
@@ -29,13 +30,17 @@ class Browser(object):
 class TraderTimerZoneAPI(Browser):
 
     def __init__(self):
-        self.dict_colors = {}
+        self.dict_colors = None
+        self._html = None
         super().__init__()
 
-    def open_url(self):
+    def scan(self, date=None, frame=515):
+        if frame == 1:
+            frame = 60300
         data = {
+            'datap': date if date else '',
             'zone': 'America/Sao_Paulo',
-            'button': 515
+            'button': frame
         }
         self.response = self.send_request('GET',
                                           BASE_URL + 'fancy.php',
@@ -43,30 +48,30 @@ class TraderTimerZoneAPI(Browser):
                                           headers=self.headers
                                           )
         if self.response:
-            return self.response
+            self._html = self.response
         return False
 
     def get_operations(self):
-        html = self.open_url()
         match = re.compile(
             r'<td class="T(.*?)" style="text-align: center;background-color:(.*?)">.*?</td>'
-        ).findall(html.text)
-
+        ).findall(self._html.text)
         return {f"{values[0][:2]}:{values[0][2:]}": self.get_color(key) for *values, key in match}
 
     def get_color(self, tag):
         self.dict_colors = {
             '#00B050': 'Verde',
             '#ED3237': 'Vermelho',
-            '#A8CF45': 'Verde Claro',
+            '#A8CF45': 'Verde claro',
             '#01B0F1': 'Azul',
-            '#ADFF2F': 'Amarelo Esverdeado',
+            '#ADFF2F': 'Amarelo esverdeado',
         }
         return self.dict_colors.get(tag, '')
 
 
 if __name__ == '__main__':
     ttz = TraderTimerZoneAPI()
+    ttz.scan(date='2021/08/08', frame=1)
     operations = ttz.get_operations()
-    color = operations['10:55']
-    print(color)
+    color = operations['22:19']
+    params = {"name": color}
+    pycolors.colors_view(params)
